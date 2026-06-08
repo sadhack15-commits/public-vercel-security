@@ -471,6 +471,20 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
+  .btn-translate {
+    margin-left: auto;
+    padding: 4px 12px;
+    background: rgba(168,85,247,0.15);
+    border: 1px solid rgba(168,85,247,0.35);
+    border-radius: 5px;
+    color: #a855f7;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-translate:hover { background: rgba(168,85,247,0.3); }
+
   @media (max-width: 600px) {
     .stats-row { grid-template-columns: repeat(2, 1fr); }
     header { flex-direction: column; gap: 12px; text-align: center; }
@@ -576,6 +590,7 @@
         <div class="ai-header">
           <div class="ai-header-dot"></div>
           <span>AI SECURITY ANALYSIS</span>
+          <button class="btn-translate" id="translateBtn" style="display:none" onclick="translateToggle()">🌐 Dịch Việt</button>
         </div>
         <div id="aiBody"></div>
       </div>
@@ -796,13 +811,50 @@ document.getElementById('aiBtn').addEventListener('click', async () => {
     const r = await fetch('/api/analyze?prompt=' + encodeURIComponent(prompt));
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const text = await r.text();
+    aiTextEN = text;
+    aiTextVI = '';
+    isViet = false;
     aiBody.innerHTML = `<div class="ai-body">${text}</div>`;
+    document.getElementById('translateBtn').style.display = 'block';
   } catch(err) {
     aiBody.innerHTML = `<div class="ai-body" style="color:var(--high)">⚠️ AI unavailable: ${err.message}\n\nUse static scan results above.</div>`;
   } finally {
     document.getElementById('aiBtn').disabled = false;
   }
 });
+
+  // Translate toggle
+  let aiTextEN = '';
+  let aiTextVI = '';
+  let isViet = false;
+
+  async function translateToggle() {
+    const btn = document.getElementById('translateBtn');
+    const aiBody = document.getElementById('aiBody');
+    if (!isViet) {
+      if (!aiTextVI) {
+        btn.textContent = '⏳ Đang dịch...';
+        btn.disabled = true;
+        const prompt = `Translate this security analysis to Vietnamese. Keep technical terms in English. Keep the same format and structure:
+
+${aiTextEN}`;
+        try {
+          const r = await fetch('/api/analyze?prompt=' + encodeURIComponent(prompt));
+          aiTextVI = await r.text();
+        } catch(e) {
+          aiTextVI = '⚠️ Không thể dịch: ' + e.message;
+        }
+        btn.disabled = false;
+      }
+      aiBody.innerHTML = `<div class="ai-body">${aiTextVI}</div>`;
+      btn.textContent = '🌐 Switch to English';
+      isViet = true;
+    } else {
+      aiBody.innerHTML = `<div class="ai-body">${aiTextEN}</div>`;
+      btn.textContent = '🌐 Dịch Việt';
+      isViet = false;
+    }
+  }
 </script>
 </body>
 </html>
